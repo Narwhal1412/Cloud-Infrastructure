@@ -1,0 +1,51 @@
+# docker-compose.yml
+services:
+  traefik:
+    restart: unless-stopped
+    container_name: traefik
+    image: traefik:v3.7
+    command:
+      - "--providers.docker.network=komodo_default"
+      - "--providers.docker=true"
+      # For testing
+      # - "--api.insecure=true"
+      # Prevent docker containers from being exposed by default,
+      # meaning the service will require an explicit label added to it,
+      # the label is: "traefik.enable=true'"
+      - "--providers.docker.exposedbydefault=false"
+      # Https
+      - "--entryPoints.websecure.address=:443"
+      
+      # Securing a Site with https
+      # Certificate provider
+      # Obtain an SSL certificate via acme using tls challenge(Requires port 443 to be open)
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      # Email associated with the certificate
+      - "--certificatesresolvers.myresolver.acme.email=henry@hatamoto.uk"
+      # Where to store the certificate
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+
+      # HTTP auto redirect to HTTPS
+      # Whenever traffic is detected on port 80
+      - "--entrypoints.web.address=:80"
+      # Auto redirect them to websecure port(443)
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+    ports:
+      - "443:443"
+      - "80:80"
+      # testing port for dashboard
+      # - "8080:8080"
+    volumes:
+      # attach itself to the docker socket,
+      # so whenever a new container is created
+      # automatically 
+      - /var/run/docker.sock:/var/run/docker.sock
+      - letsencrypt:/letsencrypt
+
+networks:
+ komodo_default:
+volumes:
+  # Automatically create a letsencrypt volume
+  letsencrypt:
